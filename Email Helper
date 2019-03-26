@@ -1,0 +1,33 @@
+/*
+* Email_Helper_N26 
+*
+* Author: Harsh Vardhan Agrawal <hv.agrwl123@hotmail.com>
+* Date:   2019-03-13
+* Description:
+* Reusable class to send single email message. This class accepts recepient id and email template id as input.
+*/
+// In a separate class so that it can be used elsewhere
+Global class Email_Helper_N26 {
+
+public static void sendEmail(ID recipient, ID template) {
+
+//New instance of a single email message
+Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+ 
+// Who you are sending the email to
+mail.setTargetObjectId(recipient);
+
+
+// The email template ID used for the email
+mail.setTemplateId(template);
+           
+mail.setBccSender(false);
+mail.setUseSignature(false);
+mail.setReplyTo('survey.support@N26.com');
+mail.setSenderDisplayName('N26 Survey Team');
+mail.setSaveAsActivity(false);
+ 
+Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });
+
+  }  
+}
