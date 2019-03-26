@@ -1,0 +1,33 @@
+@isTest
+public class Email_Surveys_N26_Test {
+    static testMethod void testMethod1() 
+    {
+        List<Contact> lstContact= new List<Contact>();
+        for(Integer i=0 ;i <10;i++)
+        {
+            Contact cont = new Contact();
+            cont.LastName = 'Test';
+            if(i<5){
+              cont.Language__c = 'de';
+            }
+            else{
+                cont.Language__c = 'en';
+            }
+            cont.Title ='Title'+i;
+            cont.email = 'abd'+i+'@gmail.com';
+            cont.Survey_Date__c = System.today() - 10;
+            lstContact.add(cont);
+        }
+        insert lstContact;
+        
+        System.debug('List of Contacts-->'+lstContact);
+        
+        Test.startTest();
+        
+        Email_Surveys_N26 obj = new Email_Surveys_N26();
+        Object Output = DataBase.executeBatch(obj); 
+        System.debug('Output-->'+Output);
+        
+        Test.stopTest();
+    }
+}
