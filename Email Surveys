@@ -1,0 +1,101 @@
+/*
+* Email_Surveys_N26
+*
+* Author: Harsh Vardhan Agrawal <hv.agrwl123@hotmail.com>
+* Date:   2019-03-13
+* Description:
+* Batch job that will send email to customer of N26 to fill out the survey. This batch job runs only once per day.
+*
+*/
+global with sharing class Email_Surveys_N26 implements Database.Batchable<sObject>,Database.Stateful
+{
+    
+    String query;
+    Id et;
+    Id contact_id;
+    map<Id,Id> email_collection = new map<Id,Id>();
+    List<Contact> update_contact = new List<Contact>();
+    List<Id> contact_ids = new List<Id>();
+    integer count=0;
+    global Database.QueryLocator start(Database.BatchableContext BC) 
+    {
+        // collect the batches of contact ids for which Survey Date is less than today. An email with a link to the survey will be sent to the ids fetched.
+        
+        query = 'Select id,language__c,survey_date__c from Contact where  Survey_Date__c < TODAY';   
+        system.debug('query -- '+query);
+        return Database.getQueryLocator(query);
+    }
+    
+    global void execute(Database.BatchableContext BC, List<Contact> scope)
+    {
+  
+        for (Contact contact_data : scope)
+        {        
+            contact_id=contact_data.Id;
+            
+            if(contact_data.language__c == 'en'){
+                //Get email template id
+                et = [Select id from EmailTemplate where name = 'Survey template en'].id;               
+                //inserting contact id and email template id in a map to send email
+                email_collection.put(contact_id, et);
+                //nullifying the survey__c date upon sending email
+                
+            }
+            else {   
+                //Get email template id
+                et = [Select id from EmailTemplate where name = 'Survey template de'].id;
+                //inserting contact id and email template id in a map to send email
+                email_collection.put(contact_id, et);
+                //nullifying the survey__c date upon sending email
+                
+            }  
+            //adding the contact required to be updated to a list
+            
+        }  
+        
+        for (Id key : email_collection.keySet()) {
+     /*-----------Handling outboung single email message limit of 5000 for unlimited edition. 
+                  The survey_date__c field of contact ids for which email is not sent will not nullify.
+                  Thus, the remaining contact ids will be sent email in the next bactch run which will happen the next day-----------*/
+            count = count + 1;
+            if(count<=5000) //as per unlimited edition
+            {
+                //sending emails to contact id in the map using single email message
+            Email_Helper_N26.sendEmail(key,email_collection.get(key) ); 
+            
+            //adding contact ids to list where survey_date__c need to be nullified
+            contact_ids.add(key); 
+            }
+            else {
+                break;
+            }
+        }
+        //nullify the survey date of contact as per the contact ids fetched
+        Contact cont = new Contact();
+        List<Contact> contact_record = [select id,survey_date__c from Contact where id 
+                                        
+                                        in : contact_ids];
+        for (Contact con : contact_record)
+        {             
+            con.survey_date__c = null;
+            update_contact.add(con);
+        }
+        
+        try
+        { 
+            database.update(update_contact);
+        }
+        catch (DmlException  e)
+        {
+            System.debug('The following exception has occurred: ' + e.getMessage());   
+        }
+        finally{
+          count=null;  
+        } 
+    }
+    
+    global void finish(Database.BatchableContext BC) 
+    {      
+        System.debug('The execution of batch finished');
+    }
+}
